@@ -1,8 +1,8 @@
 import express from "express";
+import cors from 'cors';
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import cors from 'cors';
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 
@@ -26,5 +26,3 @@ app.get("/", (req, res) => {
 app.listen(port, () =>
   console.log(`STAFF PORTAL listening at http://localhost:${port}`)
 );
-
-export default app

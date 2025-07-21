@@ -10,18 +10,22 @@ Content-Type: application/json
      "email": "newcomer@gmail.com",
     "name": "new commer",
     "password": "123456"
+
+
+
 }
 
 ### admin sign up a staff
 POST  http://localhost:3000/users/admin/addStaff
 Content-Type: application/json
-Authorization: Bearer
+Authorization: Bearer 
 
 {
-    "email": "newcomer@gmail.com",
-    "name": "new commer",
-    "password": "123456",
+    "email": "vkpinto1234@gmail.com",
+    "name": "victor Pinto",
     "role": "staff"
+
+
 }
 
 
@@ -126,6 +130,10 @@ Content-Type: application/json
   "password": "iamalive"
 }
 
+
+### get Admin profile
+GET http://localhost:3000/users/admin/profile
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwicm9sZSI6ImFkbWluIiwiaWF0IjoxNzUyNTA0MTIxfQ.cB49EV1zZKzWXU9OlpwN70pKi5iP-9_kVHANlyNLlDQ
 
 
 ### admin get all staff profiles

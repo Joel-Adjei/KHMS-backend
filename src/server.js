@@ -1,5 +1,5 @@
 import express from "express";
-import cors from "cors";
+import cors from "cors"
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";

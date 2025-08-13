@@ -7,6 +7,7 @@ import { verifyToken, isStaff, isAdmin } from "../middleware/authmiddleware.js";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 import { sendWelcomeEmail } from "../services/emailService.js";
+import { log } from "console";
 
 export async function initDb() {
   const db = await open({
@@ -105,6 +106,51 @@ router.get("/staff/leaveResponce", verifyToken, isStaff, async (req, res) => {
   res.json(applications);
 });
 
+// submit suggestion/complaint
+router.post("/staff/suggestions", verifyToken, isStaff, async (req, res) => {
+  const { suggestion } = req.body;
+
+  try {
+    const communique = await db.run(
+      `INSERT INTO suggestions (suggestion_box) VALUES (?)`,
+      [suggestion]
+    );
+    if (communique) {
+      res.status(201).json({ message: "suggestion successfully sent" });
+    } else {
+      res.status(500).json({ message: "suggestion submission failed" });
+    }
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "there was a problem submiitting your suggeston" });
+  }
+});
+
+// view announcements
+router.get("/staff/announcements", verifyToken, isStaff, async (req, res) => {
+  try {
+    let recentAnnouncements = await db.all(
+      `SELECT announcement_title, announcement, announcement_date FROM announcements WHERE announcement_date >= datetime('now', '-7 days')`
+    );
+    const oldAnnouncements = await db.all(
+      `SELECT announcement_title, announcement, announcement_date FROM announcements WHERE announcement_date < datetime('now', '-7 days') `
+    );
+    if (!recentAnnouncements) {
+      recentAnnouncements = "No announcements this week";
+    }
+    if (recentAnnouncements && oldAnnouncements) {
+    }
+    res.status(200).json({ recentAnnouncements, oldAnnouncements });
+  } catch (error) {
+    console.log(error);
+    res
+      .status(500)
+      .json({ message: "there was a problem fetching announcements" });
+  }
+});
+
 // Submit TLM
 router.post(
   "/staff/submitTLMs",
@@ -186,7 +232,27 @@ router.post("/admin/addStaff", verifyToken, isAdmin, async (req, res) => {
     }
   } catch (error) {
     console.log(error);
-    res.status(500).json({ message: "coould not register staff" });
+    res.status(500).json({ message: "could not register staff" });
+  }
+});
+
+//Communicate announcements
+router.post("/admin/announcement", verifyToken, async (req, res) => {
+  const { announcementTitle, announcement } = req.body;
+
+  try {
+    const communique = await db.run(
+      `INSERT INTO announcements (announcement_title, announcement) VALUES (?,?)`,
+      [announcementTitle, announcement]
+    );
+    if (communique) {
+      res.status(201).json({ message: "Announcement given successfully" });
+    } else {
+      res.status(500).json({ message: "Annouccement broadcast failed " });
+    }
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "could not broadcast announcement" });
   }
 });
 
@@ -210,6 +276,21 @@ router.get("/admin/staffProfiles", verifyToken, isAdmin, async (req, res) => {
   res.json(profiles);
 });
 
+// view staff profiles by id
+router.get(
+  "/admin/staffProfiles/:id",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    const staffid = req.params.id;
+    const profile = await db.all(
+      `SELECT id, name, email, role, classTaught, subject, contact, address FROM staff WHERE role = "staff" AND id = ?`,
+      [staffid]
+    );
+    res.json(profile);
+  }
+);
+
 // View all leave applications
 router.get(
   "/admin/leaveApplications",
@@ -221,6 +302,31 @@ router.get(
     JOIN staff s ON la.staffId = s.id
   `);
     res.json(applications);
+  }
+);
+
+// view leave application by leave id
+router.get(
+  "/admin/leaveApplications/:id",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    const leaveID = req.params.id;
+
+    try {
+      const leave = await db.get(
+        `SELECT la.*, s.name, s.email FROM leaveApplications la JOIN staff s ON la.staffId = s.id WHERE la.id = ?`,
+        [leaveID]
+      );
+      if (!leave)
+        return res.status(404).json({ message: "Leave application not found" });
+      res.json(leave);
+    } catch (error) {
+      console.log(error);
+      res
+        .status(500)
+        .json({ message: "there was a problem getting leave apllication" });
+    }
   }
 );
 
@@ -291,6 +397,49 @@ router.get("/admin/viewTLMs", verifyToken, isAdmin, async (req, res) => {
     res.status(500).json({ message: "Failed to retrieve teaching materials" });
   }
 });
+
+// view all suggestions
+router.get("/admin/viewSuggestions", verifyToken, isAdmin, async (req, res) => {
+  try {
+    const suggestionboxItems = await db.get(
+      `SELECT suggestion_box, suggestion_time From suggestions`
+    );
+    if (!suggestionboxItems) {
+      res
+        .status(400)
+        .json({ message: "there are no suggestions at this time" });
+    }
+    res.status(200).json(suggestionboxItems);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Failed to retrieve suggestions" });
+  }
+});
+
+// view all suggestions by id
+router.get(
+  "/admin/viewSuggestions/:id",
+  verifyToken,
+  isAdmin,
+  async (req, res) => {
+    const suggestionID = req.params.id;
+    try {
+      const suggestionboxItems = await db.get(
+        `SELECT suggestion_box, suggestion_time From suggestions where id = ?`,
+        [suggestionID]
+      );
+      if (!suggestionboxItems) {
+        res.status(400).json({
+          message: `there are no suggestions with id ${suggestionID}`,
+        });
+      }
+      res.status(200).json(suggestionboxItems);
+    } catch (error) {
+      console.log(error);
+      res.status(500).json({ message: "Failed to retrieve suggestion" });
+    }
+  }
+);
 
 // Delete a staff account
 router.delete("/admin/delete", verifyToken, isAdmin, async (req, res) => {
